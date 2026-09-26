@@ -12,7 +12,7 @@ class MsGitOps implements Serializable {
     }
 
     String deployUrl() {
-        return steps.env.DEPLOY_GIT_REPO_URL ?: 'https://github.com/adamko034/hello-world-deploy.git'
+        return steps.env.DEPLOY_GIT_REPO_URL ?: 'https://github.com/hello-world-sample/hello-world-deploy.git'
     }
 
     String deployBranch() {
