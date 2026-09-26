@@ -4,7 +4,8 @@
  * Manual release from master: bump, Docker, tag, versions-qa, optional QA helm, sync develop.
  *
  *   @Library('pipeline-library') _
- *   microserviceRelease(app: 'hello-world', image: 'adamko034/hello-world', namespace: 'hello-world-qa')
+ *   microserviceRelease(app: 'hello-world', image: 'adamko034/hello-world',
+ *                       namespace: 'hello-world-qa')
  */
 def call(Map config = [:]) {
     String app = config.app ?: error('microserviceRelease: app is required')
@@ -151,14 +152,14 @@ def call(Map config = [:]) {
                         gitOps.pushDeployVersions("chore(qa): ${env.APP_NAME} ${env.RELEASE_VERSION}")
 
                         if (params.DEPLOY_QA) {
-                            sh '''
-                                helm upgrade --install ${APP_NAME} ./deploy/${CHART_REL} \
-                                  -n ${K8S_NAMESPACE} \
-                                  -f ./deploy/${CHART_REL}/values-qa.yaml \
-                                  --set image.repository=${DOCKER_IMAGE} \
-                                  --set image.tag=${RELEASE_VERSION} \
-                                  --create-namespace
-                            '''
+                            gitOps.helmDeploy(
+                                app: env.APP_NAME,
+                                namespace: env.K8S_NAMESPACE,
+                                chartRel: env.CHART_REL,
+                                valuesFile: 'values-qa.yaml',
+                                image: env.DOCKER_IMAGE,
+                                tag: env.RELEASE_VERSION
+                            )
                         } else {
                             echo 'DEPLOY_QA=false — versions-qa.yaml updated; skipping Helm deploy.'
                         }

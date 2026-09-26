@@ -4,7 +4,8 @@
  * Redeploy QA from helm/versions-qa.yaml (no build parameters).
  *
  *   @Library('pipeline-library') _
- *   microserviceDeployQa(app: 'hello-world', image: 'adamko034/hello-world', namespace: 'hello-world-qa')
+ *   microserviceDeployQa(app: 'hello-world', image: 'adamko034/hello-world',
+ *                        namespace: 'hello-world-qa')
  */
 def call(Map config = [:]) {
     String app = config.app ?: error('microserviceDeployQa: app is required')
@@ -80,14 +81,17 @@ def call(Map config = [:]) {
                     KUBECONFIG = credentials('minikube-kubeconfig')
                 }
                 steps {
-                    sh '''
-                        helm upgrade --install ${APP_NAME} ./deploy/${CHART_REL} \
-                          -n ${K8S_NAMESPACE} \
-                          -f ./deploy/${CHART_REL}/values-qa.yaml \
-                          --set image.repository=${DOCKER_IMAGE} \
-                          --set image.tag=${VERSION} \
-                          --create-namespace
-                    '''
+                    script {
+                        def gitOps = new com.example.MsGitOps(this)
+                        gitOps.helmDeploy(
+                            app: env.APP_NAME,
+                            namespace: env.K8S_NAMESPACE,
+                            chartRel: env.CHART_REL,
+                            valuesFile: 'values-qa.yaml',
+                            image: env.DOCKER_IMAGE,
+                            tag: env.VERSION
+                        )
+                    }
                 }
             }
         }

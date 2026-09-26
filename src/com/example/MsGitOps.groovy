@@ -90,6 +90,31 @@ PY
         }
     }
 
+    /**
+     * helm upgrade --install with --wait (pods Ready via readinessProbe).
+     * chartRel e.g. helm/hello-world (relative to deploy/ checkout).
+     * valuesFile e.g. values-dev.yaml
+     */
+    void helmDeploy(Map args) {
+        String app = args.app ?: steps.error('helmDeploy: app required')
+        String namespace = args.namespace ?: steps.error('helmDeploy: namespace required')
+        String chartRel = args.chartRel ?: "helm/${app}"
+        String valuesFile = args.valuesFile ?: steps.error('helmDeploy: valuesFile required')
+        String image = args.image ?: steps.error('helmDeploy: image required')
+        String tag = args.tag ?: steps.error('helmDeploy: tag required')
+        String timeout = args.timeout ?: '5m'
+
+        steps.sh """
+            helm upgrade --install ${app} ./deploy/${chartRel} \\
+              -n ${namespace} \\
+              -f ./deploy/${chartRel}/${valuesFile} \\
+              --set image.repository=${image} \\
+              --set image.tag=${tag} \\
+              --create-namespace \\
+              --wait --timeout ${timeout}
+        """
+    }
+
     static String bumpSemVer(String version, String bumpType) {
         def parts = version.tokenize('.').collect { it as int }
         while (parts.size() < 3) {

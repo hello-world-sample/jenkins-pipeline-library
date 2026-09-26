@@ -5,7 +5,8 @@
  *
  * Usage in app Jenkinsfile:
  *   @Library('pipeline-library') _
- *   microserviceCi(app: 'hello-world', image: 'adamko034/hello-world', namespace: 'hello-world-dev')
+ *   microserviceCi(app: 'hello-world', image: 'adamko034/hello-world',
+ *                  namespace: 'hello-world-dev')
  */
 def call(Map config = [:]) {
     String app = config.app ?: error('microserviceCi: app is required')
@@ -104,15 +105,15 @@ def call(Map config = [:]) {
                     script {
                         def gitOps = new com.example.MsGitOps(this)
                         gitOps.checkoutDeployRepo()
+                        gitOps.helmDeploy(
+                            app: env.APP_NAME,
+                            namespace: env.K8S_NAMESPACE,
+                            chartRel: env.CHART_REL,
+                            valuesFile: 'values-dev.yaml',
+                            image: env.DOCKER_IMAGE,
+                            tag: env.IMAGE_TAG
+                        )
                     }
-                    sh '''
-                        helm upgrade --install ${APP_NAME} ./deploy/${CHART_REL} \
-                          -n ${K8S_NAMESPACE} \
-                          -f ./deploy/${CHART_REL}/values-dev.yaml \
-                          --set image.repository=${DOCKER_IMAGE} \
-                          --set image.tag=${IMAGE_TAG} \
-                          --create-namespace
-                    '''
                 }
             }
         }

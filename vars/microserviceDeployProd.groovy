@@ -4,7 +4,8 @@
  * Redeploy PROD from helm/versions-prod.yaml (no build parameters).
  *
  *   @Library('pipeline-library') _
- *   microserviceDeployProd(app: 'hello-world', image: 'adamko034/hello-world', namespace: 'hello-world-prod')
+ *   microserviceDeployProd(app: 'hello-world', image: 'adamko034/hello-world',
+ *                          namespace: 'hello-world-prod')
  */
 def call(Map config = [:]) {
     String app = config.app ?: error('microserviceDeployProd: app is required')
@@ -80,14 +81,17 @@ def call(Map config = [:]) {
                     KUBECONFIG = credentials('minikube-kubeconfig')
                 }
                 steps {
-                    sh '''
-                        helm upgrade --install ${APP_NAME} ./deploy/${CHART_REL} \
-                          -n ${K8S_NAMESPACE} \
-                          -f ./deploy/${CHART_REL}/values-prod.yaml \
-                          --set image.repository=${DOCKER_IMAGE} \
-                          --set image.tag=${VERSION} \
-                          --create-namespace
-                    '''
+                    script {
+                        def gitOps = new com.example.MsGitOps(this)
+                        gitOps.helmDeploy(
+                            app: env.APP_NAME,
+                            namespace: env.K8S_NAMESPACE,
+                            chartRel: env.CHART_REL,
+                            valuesFile: 'values-prod.yaml',
+                            image: env.DOCKER_IMAGE,
+                            tag: env.VERSION
+                        )
+                    }
                 }
             }
         }
