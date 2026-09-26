@@ -4,12 +4,13 @@
  * Promote / redeploy to QA using helm/versions-qa.yaml.
  *
  *   @Library('pipeline-library') _
- *   microserviceDeployQa(app: 'hello-world', image: 'adamko034/hello-world')
+ *   microserviceDeployQa(app: 'hello-world', image: 'adamko034/hello-world', namespace: 'hello-world-qa')
  */
 def call(Map config = [:]) {
     String app = config.app ?: error('microserviceDeployQa: app is required')
     String image = config.image ?: "adamko034/${app}"
     String chart = config.chart ?: "helm/${app}"
+    String namespace = config.namespace ?: error('microserviceDeployQa: namespace is required')
     String gitCreds = config.gitCredentialsId ?: 'github-pat'
 
     pipeline {
@@ -28,6 +29,7 @@ def call(Map config = [:]) {
             GIT_CREDENTIALS_ID = "${gitCreds}"
             APP_NAME = "${app}"
             CHART_REL = "${chart}"
+            K8S_NAMESPACE = "${namespace}"
         }
 
         stages {
@@ -61,7 +63,7 @@ def call(Map config = [:]) {
 
                         def currentQa = sh(
                             script: """
-                                helm get values ${env.APP_NAME} -n qa -o json 2>/dev/null \
+                                helm get values ${env.APP_NAME} -n ${env.K8S_NAMESPACE} -o json 2>/dev/null \
                                   | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('image',{}).get('tag',''))" \
                                   2>/dev/null || true
                             """,
@@ -92,7 +94,7 @@ def call(Map config = [:]) {
                 steps {
                     sh '''
                         helm upgrade --install ${APP_NAME} ./deploy/${CHART_REL} \
-                          -n qa \
+                          -n ${K8S_NAMESPACE} \
                           -f ./deploy/${CHART_REL}/values-qa.yaml \
                           --set image.repository=${DOCKER_IMAGE} \
                           --set image.tag=${VERSION} \

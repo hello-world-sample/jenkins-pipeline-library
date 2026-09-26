@@ -5,12 +5,13 @@
  *
  * Usage in app Jenkinsfile:
  *   @Library('pipeline-library') _
- *   microserviceCi(app: 'hello-world', image: 'adamko034/hello-world')
+ *   microserviceCi(app: 'hello-world', image: 'adamko034/hello-world', namespace: 'hello-world-dev')
  */
 def call(Map config = [:]) {
     String app = config.app ?: error('microserviceCi: app is required')
     String image = config.image ?: "adamko034/${app}"
     String chart = config.chart ?: "helm/${app}"
+    String namespace = config.namespace ?: error('microserviceCi: namespace is required')
     String gitCreds = config.gitCredentialsId ?: 'github-pat'
     String dockerCreds = config.dockerCredentialsId ?: 'dockerhub-cred'
     String releaseJob = config.releaseJob ?: "${app}-release"
@@ -27,6 +28,7 @@ def call(Map config = [:]) {
             GIT_CREDENTIALS_ID = "${gitCreds}"
             APP_NAME = "${app}"
             CHART_REL = "${chart}"
+            K8S_NAMESPACE = "${namespace}"
             RELEASE_JOB = "${releaseJob}"
             DOCKER_CREDENTIALS_ID = "${dockerCreds}"
         }
@@ -105,7 +107,7 @@ def call(Map config = [:]) {
                     }
                     sh '''
                         helm upgrade --install ${APP_NAME} ./deploy/${CHART_REL} \
-                          -n dev \
+                          -n ${K8S_NAMESPACE} \
                           -f ./deploy/${CHART_REL}/values-dev.yaml \
                           --set image.repository=${DOCKER_IMAGE} \
                           --set image.tag=${IMAGE_TAG} \

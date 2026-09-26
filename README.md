@@ -18,11 +18,14 @@ Shared Jenkins Pipeline Library for microservices (`hello-world`, `good-night-wo
 
 microserviceCi(
   app: 'hello-world',
-  image: 'adamko034/hello-world'
+  image: 'adamko034/hello-world',
+  namespace: 'hello-world-dev'
 )
 ```
 
-Optional keys: `chart` (default `helm/<app>`), `gitCredentialsId`, `dockerCredentialsId`.
+Required: `app`, `namespace`. Optional: `image` (default `adamko034/<app>`), `chart` (default `helm/<app>`), `gitCredentialsId`, `dockerCredentialsId`.
+
+Both apps share the same namespaces per env (`hello-world-dev` / `hello-world-qa` / `hello-world-prod`).
 
 ## Jenkins setup
 

@@ -4,12 +4,13 @@
  * Manual release from master: bump, Docker, tag, versions-qa, optional QA helm, sync develop.
  *
  *   @Library('pipeline-library') _
- *   microserviceRelease(app: 'hello-world', image: 'adamko034/hello-world')
+ *   microserviceRelease(app: 'hello-world', image: 'adamko034/hello-world', namespace: 'hello-world-qa')
  */
 def call(Map config = [:]) {
     String app = config.app ?: error('microserviceRelease: app is required')
     String image = config.image ?: "adamko034/${app}"
     String chart = config.chart ?: "helm/${app}"
+    String namespace = config.namespace ?: error('microserviceRelease: namespace is required')
     String gitCreds = config.gitCredentialsId ?: 'github-pat'
     String dockerCreds = config.dockerCredentialsId ?: 'dockerhub-cred'
     String deployQaJob = config.deployQaJob ?: "${app}-deploy-qa"
@@ -35,6 +36,7 @@ def call(Map config = [:]) {
             GIT_CREDENTIALS_ID = "${gitCreds}"
             APP_NAME = "${app}"
             CHART_REL = "${chart}"
+            K8S_NAMESPACE = "${namespace}"
             DOCKER_CREDENTIALS_ID = "${dockerCreds}"
         }
 
@@ -151,7 +153,7 @@ def call(Map config = [:]) {
                         if (params.DEPLOY_QA) {
                             sh '''
                                 helm upgrade --install ${APP_NAME} ./deploy/${CHART_REL} \
-                                  -n qa \
+                                  -n ${K8S_NAMESPACE} \
                                   -f ./deploy/${CHART_REL}/values-qa.yaml \
                                   --set image.repository=${DOCKER_IMAGE} \
                                   --set image.tag=${RELEASE_VERSION} \
