@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
 /**
- * Promote / redeploy to PROD using helm/versions-prod.yaml.
+ * Redeploy PROD from helm/versions-prod.yaml (no build parameters).
  *
  *   @Library('pipeline-library') _
  *   microserviceDeployProd(app: 'hello-world', image: 'adamko034/hello-world', namespace: 'hello-world-prod')
@@ -15,14 +15,6 @@ def call(Map config = [:]) {
 
     pipeline {
         agent any
-
-        parameters {
-            string(
-                name: 'VERSION',
-                defaultValue: '',
-                description: 'Optional. Empty = deploy tag from versions-prod.yaml. Set to update versions-prod.yaml then deploy.'
-            )
-        }
 
         environment {
             DOCKER_IMAGE = "${image}"
@@ -49,16 +41,12 @@ def call(Map config = [:]) {
                 steps {
                     script {
                         def gitOps = new com.example.MsGitOps(this)
-                        def fromFile = gitOps.readAppVersion('deploy/helm/versions-prod.yaml', env.APP_NAME)
-                        def version = params.VERSION?.trim()
-                        if (version) {
-                            if (version.endsWith('-SNAPSHOT')) {
-                                error "SNAPSHOT versions are not allowed for PROD: ${version}"
-                            }
-                            gitOps.setAppVersion('deploy/helm/versions-prod.yaml', env.APP_NAME, version)
-                            gitOps.pushDeployVersions("chore(prod): ${env.APP_NAME} ${version}")
-                        } else {
-                            version = fromFile
+                        def version = gitOps.readAppVersion('deploy/helm/versions-prod.yaml', env.APP_NAME)
+                        if (!version) {
+                            error "No version for ${env.APP_NAME} in versions-prod.yaml"
+                        }
+                        if (version.endsWith('-SNAPSHOT')) {
+                            error "SNAPSHOT versions are not allowed for PROD: ${version}"
                         }
 
                         def currentProd = sh(

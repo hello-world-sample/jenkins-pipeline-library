@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
 /**
- * Promote / redeploy to QA using helm/versions-qa.yaml.
+ * Redeploy QA from helm/versions-qa.yaml (no build parameters).
  *
  *   @Library('pipeline-library') _
  *   microserviceDeployQa(app: 'hello-world', image: 'adamko034/hello-world', namespace: 'hello-world-qa')
@@ -15,14 +15,6 @@ def call(Map config = [:]) {
 
     pipeline {
         agent any
-
-        parameters {
-            string(
-                name: 'VERSION',
-                defaultValue: '',
-                description: 'Optional. Empty = deploy tag from versions-qa.yaml. Set to change versions-qa.yaml then deploy.'
-            )
-        }
 
         environment {
             DOCKER_IMAGE = "${image}"
@@ -49,16 +41,12 @@ def call(Map config = [:]) {
                 steps {
                     script {
                         def gitOps = new com.example.MsGitOps(this)
-                        def fromFile = gitOps.readAppVersion('deploy/helm/versions-qa.yaml', env.APP_NAME)
-                        def version = params.VERSION?.trim()
-                        if (version) {
-                            if (version.endsWith('-SNAPSHOT')) {
-                                error "SNAPSHOT versions are not allowed for QA: ${version}"
-                            }
-                            gitOps.setAppVersion('deploy/helm/versions-qa.yaml', env.APP_NAME, version)
-                            gitOps.pushDeployVersions("chore(qa): ${env.APP_NAME} ${version}")
-                        } else {
-                            version = fromFile
+                        def version = gitOps.readAppVersion('deploy/helm/versions-qa.yaml', env.APP_NAME)
+                        if (!version) {
+                            error "No version for ${env.APP_NAME} in versions-qa.yaml"
+                        }
+                        if (version.endsWith('-SNAPSHOT')) {
+                            error "SNAPSHOT versions are not allowed for QA: ${version}"
                         }
 
                         def currentQa = sh(
